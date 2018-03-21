@@ -77,6 +77,8 @@
 #include <linux/compiler.h>
 #include <linux/kcov.h>
 
+#include <linux/rtmm.h>
+
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <asm/uaccess.h>
@@ -152,16 +154,24 @@ void __weak arch_release_thread_info(struct thread_info *ti)
 static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
 						  int node)
 {
+#ifdef CONFIG_RTMM
+	struct page *page = rtmm_alloc_pages(RTMM_POOL_THREADINFO);
+#else
 	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
 						  THREAD_SIZE_ORDER);
+#endif
 
 	return page ? page_address(page) : NULL;
 }
 
 static inline void free_thread_info(struct thread_info *ti)
 {
+#ifdef CONFIG_RTMM
+	rtmm_free_pages(ti, RTMM_POOL_THREADINFO);
+#else
 	kasan_alloc_pages(virt_to_page(ti), THREAD_SIZE_ORDER);
 	free_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
+#endif
 }
 # else
 static struct kmem_cache *thread_info_cache;
