@@ -2,6 +2,7 @@
  * composite.c - infrastructure for Composite USB Gadgets
  *
  * Copyright (C) 2006-2008 David Brownell
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +36,13 @@
 #define USB_VBUS_DRAW(speed)\
 	(speed == USB_SPEED_SUPER ?\
 	SSUSB_GADGET_VBUS_DRAW : CONFIG_USB_GADGET_VBUS_DRAW)
+
+#ifdef WT_COMPILE_FACTORY_VERSION
+#undef dev_dbg
+#define dev_dbg dev_info
+#undef pr_debug
+#define pr_debug pr_info
+#endif
 
 static bool enable_l1_for_hs;
 module_param(enable_l1_for_hs, bool, S_IRUGO | S_IWUSR);
