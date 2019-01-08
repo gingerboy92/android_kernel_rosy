@@ -371,7 +371,6 @@ struct power_supply {
 	bool no_thermal;
 	/* For APM emulation, think legacy userspace. */
 	int use_for_apm;
-	u8 bms_psy_ok;
 
 	/* Driver private data */
 	void *drv_data;
