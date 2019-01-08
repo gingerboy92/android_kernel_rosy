@@ -60,7 +60,6 @@
 #include <linux/page-debug-flags.h>
 #include <linux/hugetlb.h>
 #include <linux/sched/rt.h>
-#include <linux/ktrace.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -1158,8 +1157,7 @@ static void change_pageblock_range(struct page *pageblock_page,
  * If we claim more than half of the pageblock, change pageblock's migratetype
  * as well.
  */
-static bool can_steal_fallback(unsigned int order, int start_mt,
-			int fallback_type, unsigned int start_order)
+static bool can_steal_fallback(unsigned int order, int start_mt)
 {
 	/*
 	 * Leaving this order check is intended, although there is
@@ -1171,15 +1169,10 @@ static bool can_steal_fallback(unsigned int order, int start_mt,
 	if (order >= pageblock_order)
 		return true;
 
-	/* don't let unmovable allocations cause migrations simply because of free pages */
-	if ((start_mt != MIGRATE_UNMOVABLE && order >= pageblock_order / 2) ||
-	/* only steal reclaimable page blocks for unmovable allocations */
-	(start_mt == MIGRATE_UNMOVABLE && fallback_type != MIGRATE_MOVABLE && order >= pageblock_order / 2) ||
-	/* reclaimable can steal aggressively */
-	start_mt == MIGRATE_RECLAIMABLE ||
-	/* allow unmovable allocs up to 64K without migrating blocks */
-	(start_mt == MIGRATE_UNMOVABLE && start_order >= 5) ||
-	page_group_by_mobility_disabled)
+	if (order >= pageblock_order / 2 ||
+		start_mt == MIGRATE_RECLAIMABLE ||
+		start_mt == MIGRATE_UNMOVABLE ||
+		page_group_by_mobility_disabled)
 		return true;
 
 	return false;
@@ -1214,7 +1207,7 @@ static void steal_suitable_fallback(struct zone *zone, struct page *page,
 
 /* Check whether there is a suitable fallback freepage with requested order. */
 static int find_suitable_fallback(struct free_area *area, unsigned int order,
-					int migratetype, bool *can_steal, unsigned int start_order)
+					int migratetype, bool *can_steal)
 {
 	int i;
 	int fallback_mt;
@@ -1231,7 +1224,7 @@ static int find_suitable_fallback(struct free_area *area, unsigned int order,
 		if (list_empty(&area->free_list[fallback_mt]))
 			continue;
 
-		if (can_steal_fallback(order, migratetype, fallback_mt, start_order))
+		if (can_steal_fallback(order, migratetype))
 			*can_steal = true;
 
 		return fallback_mt;
@@ -1256,7 +1249,7 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 				--current_order) {
 		area = &(zone->free_area[current_order]);
 		fallback_mt = find_suitable_fallback(area, current_order,
-				start_migratetype, &can_steal, order);
+				start_migratetype, &can_steal);
 		if (fallback_mt == -1)
 			continue;
 
@@ -3055,15 +3048,10 @@ retry_cpuset:
 		 * can deadlock because I/O on the device might not
 		 * complete.
 		 */
-		u64 start_time, end_time;
 		gfp_mask = memalloc_noio_flags(gfp_mask);
-
-		start_time = ktime_get_ns();
 		page = __alloc_pages_slowpath(gfp_mask, order,
 				zonelist, high_zoneidx, nodemask,
 				preferred_zone, classzone_idx, migratetype);
-		end_time = ktime_get_ns();
-		ktrace_add_mm_event(KTRACE_MM_TYPE_SLOW_PATH, end_time, end_time - start_time);
 	}
 
 	trace_mm_page_alloc(page, order, gfp_mask, migratetype);
