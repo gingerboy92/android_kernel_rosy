@@ -1,4 +1,4 @@
-## "wow kernel" tree for Xiaomi Redmi 5 [rosy]
+## "doge kernel" oreo tree for Xiaomi Redmi 5 [rosy]
 
 ### Kernel source
 This 3.18.x kernel tree is based on [android-linux-stable's](https://github.com/android-linux-stable/msm-3.18) `kernel.lnx.3.18.r33-rel` branch with changes necessary for rosy.
